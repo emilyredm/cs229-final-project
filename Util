@@ -1,0 +1,7 @@
+import numpy as np
+import pandas as pd
+
+def extract_flight(df, flight, Class='Economy'):
+    df = df[df.iloc[:, 2] == flight]
+    df = df[df.iloc[:, -4] == Class]
+    return df
