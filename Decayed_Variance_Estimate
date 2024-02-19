@@ -1,0 +1,28 @@
+import numpy as np
+import pandas as pd
+
+class Decayed_Point_Variance_Estimation:
+    def __init__(self, memory=3):
+        self.memory = memory
+
+    def point_naive_variance(self, data, day):
+        # Correctly filter the data and select the last column
+        D = data[data.iloc[:, -2] == day].iloc[:, -1]
+        if D.empty:
+            return np.nan  # Return NaN if the data is empty
+        return np.var(D, ddof=1)  # Use ddof=1 for sample variance
+
+    def point_variance(self, data, day):
+        # Correctly filter the data for the given range and select the last two columns
+        D = data[data.iloc[:, -2].between(day, day + self.memory)].iloc[:, -2:].values
+        if len(D) == 0:
+            return np.nan  # Return NaN if the data is empty
+        W = np.exp(-(D[:, 0] - day))  # Apply exponential decay based on day difference
+        weighted_prices = W * D[:, 1]
+        mu = np.average(D[:, 1], weights=W)  # Compute weighted mean
+        return np.average((D[:, 1] - mu)**2, weights=W)  # Compute weighted variance
+    
+    def variance(self, data):
+        days = np.unique(data.iloc[:, -2])  # Use unique days to avoid repetition
+        output = {day: self.point_variance(data, day) for day in days}
+        return output
