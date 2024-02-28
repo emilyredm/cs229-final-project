@@ -1,7 +1,22 @@
 import numpy as np
 import pandas as pd
+#useful functions for Kaggle dataset
 
 def extract_flight(df, flight, Class='Economy'):
     df = df[df.iloc[:, 2] == flight]
-    df = df[df.iloc[:, -4] == Class]
+    df = df[df.iloc[:, -5] == Class]
     return df
+
+def distance(city_1,city_2):
+    D = {('Mumbai', 'Delhi') : 1153.0, ('Delhi','Mumbai') : 1153.0, ('Chennai', 'Hyderabad') : 516.0, ('Hyderabad','Chennai') : 516.0,
+     ('Bangalore', 'Kolkata') : 1560.0, ('Kolkata','Bangalore') : 1560.0, ('Delhi', 'Bangalore') : 1741.22, ('Bangalore','Delhi') : 1741.22,
+     ('Delhi', 'Kolkata') : 1304.95, ('Kolkata','Delhi') : 1304.95, ('Delhi', 'Hyderabad') : 1259.79, ('Hyderabad','Delhi') : 1259.79,
+     ('Delhi', 'Chennai') : 1757.54, ('Chennai','Delhi') : 1757.54, ('Mumbai', 'Bangalore') : 837.83, ('Bangalore','Mumbai') : 837.83, 
+     ('Mumbai', 'Kolkata') : 837.83, ('Kolkata','Mumbai') : 837.83, ('Mumbai', 'Hyderabad') : 623.48, ('Hyderabad', 'Mumbai') : 623.48, 
+     ('Bangalore', 'Hyderabad') : 497.05, ('Hyderabad','Bangalore') : 497.05, ('Mumbai', 'Chennai') : 1025.40, ('Chennai','Mumbai') : 1025.40,
+     ('Bangalore', 'Chennai') : 284.74, ('Chennai','Bangalore') : 284.74, ('Kolkata', 'Hyderabad') : 1184.47, ('Hyderabad','Kolkata') : 1184.47, 
+     ('Kolkata', 'Chennai') : 1363.71, ('Chennai','Kolkata') : 1363.71}
+    return D[(city_1,city_2)]
+
+def extract_airline(df, airline):
+    return df[df.iloc[:, 1] == airline]
