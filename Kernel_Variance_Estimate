@@ -6,33 +6,28 @@ class Kernel_Variance_Estimation:
         self.s = s
         self.memory = memory
 
-    def point_naive_variance(self, data, day):
-        # Correctly filter the data and select the last column
-        D = data[data.iloc[:, -3] == day].iloc[:, -1]
-        if D.empty:
-            return np.nan  # Return NaN if the data is empty
-        return np.var(D)  # Use ddof=1 for sample variance
+    def point_naive_variance(self, days, P, day):
+        D = P[days == day]
+        if D.size == 0:
+            return np.nan
+        return np.var(D)
     
-    def naive_variance(self, data):
-        days = np.unique(data.iloc[:, -3])  # Use unique days to avoid repetition
-        output = {day: self.point_naive_variance(data, day) for day in days}
+    def naive_variance(self, days, P):
+        days = np.unique(days)
+        output = {day: self.point_naive_variance(days, P, day) for day in days}
         return output
 
-    def point_variance(self, data, day,s=1.0, memory=3, symmetric = True):
-        # Correctly filter the data for the given range and select the last two columns
-        if symmetric:
-            D = data[data.iloc[:, -3].between(day - memory, day + memory + 1)].iloc[:, -3:-1].values
-        else:
-            D = data[data.iloc[:, -3].between(day, day + memory+1)].iloc[:, -3:-1].values
-        if len(D) == 0:
+    def point_variance(self, days, P, day,s=1.0, memory=3, symmetric = True):
+        if len(P) == 0:
             return np.nan  # Return NaN if the data is empty
-        U = np.unique(D[:, 0])
+        U = np.unique(days)
         V = np.zeros(len(U))
         for i in range(len(U)):
-            V[i] = self.point_naive_variance(data,U[i])
+            V[i] = self.point_naive_variance(days,P,U[i])
         W = np.exp(-((U - day) ** 2) / (2.0 * (s ** 2)))
         return  np.average(V, weights=W) # Compute weighted variance
     
-    def variance(self, data, s=1.0, memory=3,symmetric = True):
-        m = np.max(data.iloc[:,-3].values)
-        return np.array([ self.point_variance(data, day,s=s, memory=memory,symmetric=symmetric) for day in range(m) ])
+    def variance(self, days, P, s=1.0, memory=3,symmetric = True):
+        m = int(np.max(days))
+        print(m)
+        return np.array([self.point_variance(days, P, day,s=s, memory=memory,symmetric=symmetric) for day in range(m + 1)])
