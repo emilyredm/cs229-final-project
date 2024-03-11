@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+
+class Kernel_Moment_Estimation:
+    def __init__(self, s=1.0, memory=3):
+        self.s = s
+        self.memory = memory
+
+    def point_naive_variance(self, days, P, day):
+        D = P[days == day]
+        if D.size == 0:
+            return np.nan
+        return np.var(D)
+    
+    def naive_variance(self, days, P):
+        days = np.unique(days)
+        output = {day: self.point_naive_variance(days, P, day) for day in days}
+        return output
+
+    def point_variance(self, days, P, day,s=1.0, memory=3):
+        if len(P) == 0:
+            return np.nan  # Return NaN if the data is empty
+        U = np.unique(days)
+        V = np.zeros(len(U))
+        for i in range(len(U)):
+            V[i] = self.point_naive_variance(days,P,U[i])
+        W = np.exp(-((U - day) ** 2) / (2.0 * (s ** 2)))
+        #return  np.average(V, weights=W) # Compute weighted variance
+        return np.sum( W * V ) / np.sum(W)
+    
+    def variance(self, days, P, s=1.0, memory=3):
+        m = int(np.max(days))
+        return np.array([self.point_variance(days, P, day, s=s, memory=memory) for day in range(m + 1)])
+    
+    def std(self, days, P, s=1.0, memory=3):
+        return np.sqrt(self.variance(days, P, s=1.0, memory=3))
+    
+    def point_mean(self,days,P,day,s=1.0, memory=3):
+        if len(P) == 0:
+            return np.nan
+        U = np.unique(days)
+        V = np.zeros(len(U))
+        for i in range(len(U)):
+            V[i] = np.mean( P[days == U[i]] )
+        W = np.exp(-((U - day) ** 2) / (2.0 * (s ** 2)))
+        return np.sum( W * V ) / np.sum(W)
+    
+    def mean(self,days,P,s=1.0, memory=3):
+        m = int(np.max(days))
+        return np.array([self.point_mean(days,P,day,s=s,memory=memory) for day in range(m+1)])
+    
+    def dM(self,days,P,stored=None,s=1.0, memory=3):
+        if stored.any() != None:
+            return np.diff(stored)
+        else:
+            return -np.diff(self.mean(days,P,s=s,memory=memory))
+        
+    def dV(self,days,P,stored=None,s=1.0, memory=3):
+        if stored.any() != None:
+            return np.diff(stored)
+        else:
+            return -np.diff(self.variance(days,P,s=s,memory=memory))
+        
+    def MEx(self,days,P,stored=None,s=1.0,memory=3):
+        if stored.any() == None:
+            v = self.dM(days,P,stored=None,s=1.0, memory=3)
+            return np.argmax(v), np.max(v)
+        elif len(stored) < len(days):
+            return np.argmax(stored), np.max(stored)
+        else: 
+            v = np.diff(stored)
+            return np.argmax(v), np.max(v)
