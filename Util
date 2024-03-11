@@ -18,5 +18,20 @@ def distance(city_1,city_2):
      ('Kolkata', 'Chennai') : 1363.71, ('Chennai','Kolkata') : 1363.71}
     return D[(city_1,city_2)]
 
-def extract_airline(df, airline):
-    return df[df.iloc[:, 1] == airline]
+def extract_airline(df, airline,Class=None,City_pair=None):
+    df = df[df.iloc[:, 1] == airline]
+    if Class == None and City_pair == None:
+        return df
+    else:
+        if City_pair == None:
+            return df[df.iloc[:,-5] == Class]
+        elif Class == None:
+            df[df.iloc[:,3] == City_pair[0]]
+            return df[df.iloc[:,-6] == City_pair[1]]
+        else:
+            df[df.iloc[:,-5] == Class]
+            df[df.iloc[:,3] == City_pair[0]]
+            return df[df.iloc[:,-6] == City_pair[1]]
+
+def norm(V):
+    return ( V - np.min(V) ) / (np.max(V) - np.min(V))
