@@ -1,0 +1,45 @@
+class SoftmaxEnsemble():
+    def __init__(self):
+        self.theta = None
+        self.phi = None
+
+    def softmax(self,x):
+        import numpy as np
+        x = np.exp(x - np.max(x))
+        return x / np.sum(x)
+    
+    def grad_softmax(self,theta):
+        import numpy as np
+        S = self.softmax(theta)
+        return np.diag(S.flatten()) - S @ S.T
+    
+    def grad(self,theta,Y,H,lam=0.0):
+        import numpy as np
+        return 2.0 * self.grad_softmax(theta) @ np.sum(H * (H @ self.softmax(theta) - Y).reshape(-1,1),axis=0) + lam
+    
+    def loss(self,H,Y,crit='mae'):
+        import numpy as np
+        if crit == 'rmse':
+            return np.linalg.norm(Y - H @ self.phi) / len(Y)
+        elif crit == 'mae':
+            return np.mean(np.abs(Y - H @ self.phi))
+        elif crit == 'mse':
+            return np.linalg.norm(Y - H @ self.phi) ** 2 / len(Y)
+        
+    def predict(self,H):
+        return H @ self.phi
+        
+    def fit(self,Y,H,max_iter=1000,epsilon=0.01,lr=0.1,theta_init=[],lam=0.0):
+        import numpy as np
+        if len(theta_init) != H.shape[1]:
+            theta_init = np.linalg.norm(H-Y.reshape(-1,1),axis=0)/ np.linalg.norm(H-Y.reshape(-1,1))
+        iter = 0
+        diff = np.copy(epsilon) + 1.0
+        self.theta = np.copy(theta_init)
+        while iter < max_iter and diff > epsilon:
+            move = lr * self.grad(self.theta,Y,H,lam=lam)
+            self.theta -= move
+            diff = np.linalg.norm(move)
+            iter += 1
+        self.phi = self.softmax(self.theta)
+        return self.theta, self.phi
