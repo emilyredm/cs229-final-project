@@ -1,0 +1,204 @@
+class JumpMetaModel():
+    def __init__(self,jClass=None, jReg=None):
+        self.jReg = jReg
+        self.jClass = jClass
+        self.bModel = None
+        self.jClassErr = None
+        self.jClassAcc = None
+        self.jRegErr = None
+        self.bErr = None
+        self.aModel = None
+        self.aErr = None
+    def fit(self,X,Y,Jdf,dep='price',greedy=False,jump_drop=[],search=True):
+        import pandas as pd
+        import numpy as np
+        from sklearn.tree import DecisionTreeRegressor
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.neighbors import KNeighborsRegressor
+        from sklearn.ensemble import ExtraTreesRegressor
+        from sklearn.ensemble import BaggingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn import metrics
+        from sklearn.model_selection import train_test_split
+        if self.jClass == None:
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.ensemble import ExtraTreesClassifier
+            from sklearn.neighbors import KNeighborsClassifier
+            from sklearn.tree import DecisionTreeClassifier
+            from sklearn.ensemble import BaggingClassifier
+            if search:
+                x_train,x_test,y_train,y_test=train_test_split(X,Jdf['jump_point'],test_size=0.4,random_state=100)
+
+                models = [BaggingClassifier(),ExtraTreesClassifier()]
+                m = 0.0
+                for model in models:
+                    model.fit(x_train,y_train)
+                    y_pred = model.predict(x_test)
+                    a = metrics.accuracy_score(y_pred,y_test)
+                    e = metrics.mean_absolute_error(y_test, y_pred)
+                    if m < a:
+                        self.jClass = model
+                        self.jClassAcc = np.copy(a)
+                        self.jClassErr = np.copy(e)
+                print(self.jClass)
+                if greedy:
+                    self.jClass.fit(X,Jdf['jump_point'])
+            else:
+                MODEL = ExtraTreesClassifier()
+                MODEL.fit(X,Jdf['jump_point'])
+                self.jClass = MODEL
+        if self.jReg == None:
+            if search:
+                m = float('inf')
+                x_train,x_test,y_train,y_test=train_test_split(X,Jdf['jump_size'],test_size=0.3,random_state=100)
+                models = [DecisionTreeRegressor(),RandomForestRegressor(),ExtraTreesRegressor(),BaggingRegressor(),RandomForestRegressor()]
+                for model in models:
+                    model.fit(x_train,y_train)
+                    y_pred = model.predict(x_test)
+                    e = round(metrics.mean_absolute_error(y_test, y_pred),3)
+                    if e < m:
+                        self.jReg = model
+                        self.jRegErr = np.copy(e)
+                print(self.jReg)
+                if greedy:
+                    self.jReg.fit(X,Jdf['jump_size'])
+            else:
+                MODEL = RandomForestRegressor()
+                MODEL.fit(X,Jdf['jump_size'])
+                self.jReg = MODEL
+        if len(jump_drop) < 1:
+            def jump_rem(row):
+                if row['jump_point'] >= row['days_left']:
+                    row[dep] -= row['jump_size']
+                return row
+            df = pd.concat([X,Jdf], axis=1)
+            df[dep] = Y.values
+            jump_drop = df.apply(jump_rem,axis=1)[dep]
+            print("attained")
+        if search:
+            x_train,x_test,y_train,y_test=train_test_split(X,jump_drop,test_size=0.3,random_state=100)
+            models = [DecisionTreeRegressor(),RandomForestRegressor(),ExtraTreesRegressor(),BaggingRegressor(),GradientBoostingRegressor()]
+            m = float('inf')
+            for model in models:
+                model.fit(x_train,y_train)
+                y_pred = model.predict(x_test)
+                e = metrics.mean_absolute_error(y_test, y_pred)
+                if e < m:
+                    self.bModel = model
+                    self.bErr = np.copy(e)
+            print(self.bModel)
+            if greedy:
+                self.bModel.fit(X,jump_drop)
+        else:
+            MODEL = GradientBoostingRegressor()
+            MODEL.fit(X,jump_drop)
+            self.bModel = MODEL
+        return self.jClass,self.jReg,self.bModel
+    
+    def addFit(self,X,Y,Jdf,greedy=False,search=True):
+        import pandas as pd
+        import numpy as np
+        from sklearn.tree import DecisionTreeRegressor
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.neighbors import KNeighborsRegressor
+        from sklearn.ensemble import ExtraTreesRegressor
+        from sklearn.ensemble import BaggingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn import metrics
+        from sklearn.model_selection import train_test_split
+        if self.jClass == None:
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.ensemble import ExtraTreesClassifier
+            from sklearn.neighbors import KNeighborsClassifier
+            from sklearn.tree import DecisionTreeClassifier
+            from sklearn.ensemble import BaggingClassifier
+            if search:
+                x_train,x_test,y_train,y_test=train_test_split(X,Jdf['jump_point'],test_size=0.3,random_state=100)
+                models = [BaggingClassifier(),ExtraTreesClassifier()]
+                m = 0.0
+                for model in models:
+                    model.fit(x_train,y_train)
+                    y_pred = model.predict(x_test)
+                    a = metrics.accuracy_score(y_pred,y_test)
+                    e = metrics.mean_absolute_error(y_test, y_pred)
+                    if m < a:
+                        self.jClass = model
+                        self.jClassAcc = np.copy(a)
+                        self.jClassErr = np.copy(e)
+                print(self.jClass)
+                if greedy:
+                    self.jClass.fit(X,Jdf['jump_point'])
+            else:
+                MODEL = ExtraTreesClassifier()
+                MODEL.fit(X,Jdf['jump_point'])
+                self.jClass = MODEL
+        if self.jReg == None:
+            if search:
+                m = float('inf')
+                x_train,x_test,y_train,y_test=train_test_split(X,Jdf['jump_size'],test_size=0.3,random_state=100)
+                models = [DecisionTreeRegressor(),RandomForestRegressor(),ExtraTreesRegressor(),BaggingRegressor(),RandomForestRegressor()]
+                for model in models:
+                    model.fit(x_train,y_train)
+                    y_pred = model.predict(x_test)
+                    e = round(metrics.mean_absolute_error(y_test, y_pred),3)
+                    if e < m:
+                        self.jReg = model
+                        self.jRegErr = np.copy(e)
+                print(self.jReg)
+                if greedy:
+                    self.jReg.fit(X,Jdf['jump_size'])
+            else:
+                MODEL = RandomForestRegressor()
+                MODEL.fit(X,Jdf['jump_size'])
+                self.jReg = MODEL
+        if search:
+            models = [DecisionTreeRegressor(),RandomForestRegressor(),ExtraTreesRegressor(),BaggingRegressor(),GradientBoostingRegressor()]
+            x_train,x_test,y_train,y_test=train_test_split(pd.concat([X,Jdf],axis=1),Y,test_size=0.3,random_state=100)
+            m = 0.0
+            for model in models:
+                model.fit(x_train,y_train)
+                y_pred = model.predict(x_test)
+                e = metrics.mean_absolute_error(y_test, y_pred)
+                if e < m:
+                    self.aModel = model
+                    self.aErr = np.copy(e)
+            print("attained")
+            print(self.aModel)
+            if greedy:
+                self.aModel.fit(pd.concat([X,Jdf],axis=1),Y)
+        else:
+            MODEL = GradientBoostingRegressor()
+            MODEL.fit(pd.concat([X,Jdf],axis=1),Y)
+            self.aModel = MODEL
+        return self.jClass,self.jReg,self.aModel
+    
+    def addPredict(self,X):
+        print(self.jClass.predict(X))
+        Jdf = pd.DataFrame({ 'jump_point': self.jClass.predict(X), 'jump_size': self.jReg.predict(X)})
+        return self.aModel.predict(pd.concat([X,Jdf],axis=1))
+
+
+    def predict(self,X,dep='price'):
+        import numpy as np
+        import pandas as pd
+        from sklearn.tree import DecisionTreeRegressor
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.neighbors import KNeighborsRegressor
+        from sklearn.ensemble import ExtraTreesRegressor
+        from sklearn.ensemble import BaggingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.ensemble import ExtraTreesClassifier
+        from sklearn.neighbors import KNeighborsClassifier
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.ensemble import BaggingClassifier
+        def jump_add(row):
+            if row['jump_point'] >= row['days_left']:
+                row[dep] += row['jump_size']
+            return row
+        Jdf = pd.DataFrame({ 'jump_point': self.jClass.predict(X), 'jump_size': self.jReg.predict(X)})
+        D = pd.concat([pd.DataFrame({dep:self.bModel.predict(X)}),Jdf],axis=1)
+        D['days_left'] = X['days_left']
+        D = D.apply(jump_add,axis=1)
+        return D[dep]
+    
