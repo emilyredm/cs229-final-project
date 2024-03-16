@@ -15,31 +15,51 @@ class SoftmaxEnsemble():
     
     def grad(self,theta,Y,H,lam=0.0):
         import numpy as np
-        return 2.0 * self.grad_softmax(theta) @ np.sum(H * (H @ self.softmax(theta) - Y).reshape(-1,1),axis=0) + lam
+        D = H @ self.softmax(theta) - Y
+        return 2.0 * self.grad_softmax(theta) @ np.sum(H * D.reshape(-1,1),axis=0) + lam, np.linalg.norm(D) / len(Y)
     
     def loss(self,H,Y,crit='mae'):
         import numpy as np
-        if crit == 'rmse':
+        if crit == 'mse':
+            return np.linalg.norm(Y - H @ self.phi) ** 2 / len(Y)
+        elif crit == 'rmse':
             return np.linalg.norm(Y - H @ self.phi) / len(Y)
         elif crit == 'mae':
-            return np.mean(np.abs(Y - H @ self.phi))
-        elif crit == 'mse':
-            return np.linalg.norm(Y - H @ self.phi) ** 2 / len(Y)
+            return np.sum(np.abs(Y - H @ self.phi)) / len(Y)
         
     def predict(self,H):
         return H @ self.phi
         
-    def fit(self,Y,H,max_iter=1000,epsilon=0.01,lr=0.1,theta_init=[],lam=0.0):
+    def fit(self,Y,H,max_iter=10000,epsilon=0.01,lr=0.1,lam=0.0,lEps=0.01,epochs = 0,std = 10.0):
         import numpy as np
-        if len(theta_init) != H.shape[1]:
-            theta_init = np.linalg.norm(H-Y.reshape(-1,1),axis=0)/ np.linalg.norm(H-Y.reshape(-1,1))
-        iter = 0
-        diff = np.copy(epsilon) + 1.0
-        self.theta = np.copy(theta_init)
-        while iter < max_iter and diff > epsilon:
-            move = lr * self.grad(self.theta,Y,H,lam=lam)
-            self.theta -= move
-            diff = np.linalg.norm(move)
-            iter += 1
+        thetas = [np.log(1.0 / np.mean(np.abs(H - Y.reshape(-1,1)), axis=0)),1.0 / np.mean(np.abs(H - Y.reshape(-1,1)),axis=0) 
+                  ,np.log(1.0 / np.mean(np.abs(H - Y.reshape(-1,1)), axis=0)),1.0 / np.mean(np.abs(H - Y.reshape(-1,1)),axis=0) ]
+        if epochs > 0:
+            for epoch in range(1,epochs + 1):
+                thetas.append(np.random.normal(np.zeros(H.shape[1]),std))
+        losses = np.zeros(len(thetas))
+        losses[0] = np.linalg.norm( H @ thetas[0] - Y ) / len(Y)
+        losses[1] = np.linalg.norm( H @ thetas[1] - Y ) / len(Y)
+        for epoch in range(2,epochs + 4):
+            iter = 0
+            diff = np.copy(epsilon) + 1.0
+            theta = thetas[epoch]              
+            prev_loss = np.linalg.norm( Y - H @ self.softmax(theta) ) / len(Y)
+            loss = prev_loss - 1.0
+            while iter < max_iter and diff > epsilon and prev_loss - loss > lEps:
+                prev_loss = np.copy(loss)
+                move, loss = self.grad(theta,Y,H,lam=lam)
+                theta -= lr * move
+                diff = np.linalg.norm(lr * move)
+                iter += 1
+                if prev_loss - loss <= 0:
+                    print("error")
+                if iter % 500 == 0:
+                    print(loss)
+            losses[epochs] = loss
+            print(iter)
+            thetas[epochs] = theta
+        #if np.linalg.norm(Y - H @ self.softmax(theta)) / len(Y) < m:
+        self.theta = thetas[np.argmin(losses)]
         self.phi = self.softmax(self.theta)
         return self.theta, self.phi
